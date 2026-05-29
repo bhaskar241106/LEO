@@ -17,7 +17,7 @@ After creating the empty repository, run these commands:
 
 ```bash
 cd "C:\Users\bhaskar\Desktop\final sv llm\bobmarleyy"
-git push -u origin master
+git push -u origin main
 ```
 
 ## Alternative: If Repository Already Exists
@@ -26,7 +26,7 @@ If you already created the repository with files, use force push:
 
 ```bash
 cd "C:\Users\bhaskar\Desktop\final sv llm\bobmarleyy"
-git push -u origin master --force
+git push -u origin main --force
 ```
 
 ## Step 3: Verify
@@ -73,7 +73,7 @@ Your Leo AI project with:
 ### Error: "Updates were rejected"
 **Solution**: Use force push:
 ```bash
-git push -u origin master --force
+git push -u origin main --force
 ```
 
 ---
