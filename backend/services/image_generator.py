@@ -308,6 +308,12 @@ Strict Rules:
                 # Clean up any stray quotes the model might have returned
                 if enhanced.startswith('"') and enhanced.endswith('"'):
                     enhanced = enhanced[1:-1]
+                
+                # Programmatically strip conversational prefixes and trailing parenthetical meta-commentary
+                import re
+                enhanced = re.sub(r'^(?:here is the enhanced prompt|enhanced prompt|here is an enhanced version of your prompt|here is a detailed prompt)[:\s]*', '', enhanced, flags=re.IGNORECASE)
+                enhanced = re.sub(r'\s*\([^)]*(?:enhanced|prompt|word|words|maintain|count|limit|under)[^)]*\)\s*$', '', enhanced, flags=re.IGNORECASE)
+                
                 logger.info(f"✨ Enhanced prompt: {enhanced[:100]}...")
                 return enhanced
             else:
