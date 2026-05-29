@@ -9,6 +9,9 @@ import sys
 import subprocess
 import socket
 
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
 def check_command(cmd, name):
     """Check if a command exists"""
     try:
