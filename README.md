@@ -60,29 +60,29 @@ graph TD
     classDef models fill:#32cd32,stroke:#006400,stroke-width:2px,color:#fff;
     classDef storage fill:#ff8c00,stroke:#8b0000,stroke-width:2px,color:#fff;
 
-    subgraph User Interface Layer
+    subgraph UI_Layer ["User Interface Layer"]
         UI["💻 Desktop App (PyWebView) / Browser"]:::frontend
     end
 
-    subgraph Frontend Engine (Port 5173)
+    subgraph FE_Engine ["Frontend Engine (Port 5173)"]
         R19["⚛️ React 19 Application"]:::frontend
         TJS["🎮 Three.js Viseme Lip-Sync"]:::frontend
         FMO["✨ Framer Motion UI Animations"]:::frontend
     end
 
-    subgraph Backend Core (Port 8000)
+    subgraph BE_Core ["Backend Core (Port 8000)"]
         FAS["⚡ FastAPI Web Framework"]:::backend
         PHO["🎙️ Phoneme Extractor Engine"]:::backend
         RAG["📁 ChromaDB Document Indexer"]:::backend
         PER["🎭 Dynamic Persona Manager"]:::backend
     end
 
-    subgraph AI Model Host (Port 11434)
+    subgraph AI_Host ["AI Model Host (Port 11434)"]
         OLL["🧠 Ollama Inference Core"]:::models
         SDM["🎨 Stable Diffusion Generator"]:::models
     end
 
-    subgraph Local Storage & Cache
+    subgraph Local_Storage ["Local Storage & Cache"]
         SQL["💾 memory.db (SQLite)"]:::storage
         VEC["🗂️ Vector Embeddings Cache"]:::storage
     end
