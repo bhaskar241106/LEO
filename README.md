@@ -87,17 +87,28 @@ graph TD
         VEC["🗂️ Vector Embeddings Cache"]:::storage
     end
 
-    UI <--> R19
-    R19 <--> TJS
-    R19 <--> FMO
-    R19 <-->|REST / WebSockets| FAS
-    FAS <--> PHO
-    FAS <--> RAG
-    FAS <--> PER
-    FAS <-->|Local Host Loop| OLL
-    FAS <-->|Pytorch Pipeline| SDM
-    FAS <--> SQL
-    RAG <--> VEC
+    UI --> R19
+    R19 --> UI
+    R19 --> TJS
+    TJS --> R19
+    R19 --> FMO
+    FMO --> R19
+    R19 -->|REST / WebSockets| FAS
+    FAS -->|REST / WebSockets| R19
+    FAS --> PHO
+    PHO --> FAS
+    FAS --> RAG
+    RAG --> FAS
+    FAS --> PER
+    PER --> FAS
+    FAS -->|Local Host Loop| OLL
+    OLL -->|Local Host Loop| FAS
+    FAS -->|Pytorch Pipeline| SDM
+    SDM -->|Pytorch Pipeline| FAS
+    FAS --> SQL
+    SQL --> FAS
+    RAG --> VEC
+    VEC --> RAG
 ```
 
 ### 🔁 Deep Dive Request-Response Data Flow
