@@ -285,11 +285,19 @@ class ImageGenerator:
     def enhance_prompt(self, simple_prompt: str):
         """Use LLM to enhance a simple prompt into a detailed one"""
         try:
+            system_instruction = """You are a highly disciplined Stable Diffusion prompt enhancer.
+Task: Enrich the user's input with specific artistic details, rendering styles, atmospheric lighting, and high-quality textures.
+Strict Rules:
+1. Retain ALL original subjects, actions, settings, and time-of-day exactly as requested.
+2. DO NOT introduce contradictory elements (e.g., if the prompt mentions night, do not change it to morning. If it is outdoors, keep it outdoors).
+3. Output ONLY the finalized prompt itself. Do not include labels like "Enhanced Prompt:", quotes, word counts, or conversational prefaces."""
+
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
                     "model": "phi3:mini",
-                    "prompt": f"Enhance this image prompt with artistic details, style, lighting, and composition. Keep it under 100 words:\n\n{simple_prompt}\n\nEnhanced prompt:",
+                    "system": system_instruction,
+                    "prompt": f"User Prompt: {simple_prompt}",
                     "stream": False
                 },
                 timeout=15
@@ -297,6 +305,9 @@ class ImageGenerator:
             
             if response.status_code == 200:
                 enhanced = response.json().get("response", simple_prompt).strip()
+                # Clean up any stray quotes the model might have returned
+                if enhanced.startswith('"') and enhanced.endswith('"'):
+                    enhanced = enhanced[1:-1]
                 logger.info(f"✨ Enhanced prompt: {enhanced[:100]}...")
                 return enhanced
             else:
