@@ -1,0 +1,285 @@
+import React, { useRef, useEffect, useState, Component } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
+import { ContactShadows, Environment, Html } from '@react-three/drei';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import { VRMLoaderPlugin, VRMUtils, VRMExpressionPresetName } from '@pixiv/three-vrm';
+import * as THREE from 'three';
+
+// ─── Error Boundary ──────────────────────────────────────────────────────────
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Html center>
+          <div style={{
+            background: 'rgba(0,0,0,0.85)', padding: '24px', borderRadius: '12px',
+            color: '#ff6b6b', textAlign: 'center', width: '320px',
+            border: '1px solid rgba(255,100,100,0.4)'
+          }}>
+            <h3 style={{ margin: '0 0 8px' }}>⚠️ Avatar Not Found</h3>
+            <p style={{ fontSize: '0.85rem', color: '#ccc', margin: 0 }}>
+              Place your <code style={{ color: '#00ffff' }}>avatar.vrm</code> file inside:<br />
+              <code style={{ color: '#00ffff' }}>frontend/public/models/</code>
+            </p>
+          </div>
+        </Html>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Viseme → VRM Expression ──────────────────────────────────────────────────
+const visemeToExpression = {
+  'Neutral': VRMExpressionPresetName.Neutral,
+  'A':       VRMExpressionPresetName.Aa,
+  'E':       VRMExpressionPresetName.Ee,
+  'I':       VRMExpressionPresetName.Ih,
+  'O':       VRMExpressionPresetName.Oh,
+  'U':       VRMExpressionPresetName.Ou,
+  'M':       VRMExpressionPresetName.Neutral,
+  'F':       VRMExpressionPresetName.Aa,
+  'T':       VRMExpressionPresetName.Ee,
+};
+
+const MOUTH_EXPRS = [
+  VRMExpressionPresetName.Aa,
+  VRMExpressionPresetName.Ee,
+  VRMExpressionPresetName.Ih,
+  VRMExpressionPresetName.Oh,
+  VRMExpressionPresetName.Ou,
+];
+
+// ─── Arm pose helper ──────────────────────────────────────────────────────────
+function applyRestPose(vrm) {
+  const humanoid = vrm.humanoid;
+  if (!humanoid) return;
+
+  const setRot = (name, x, y, z) => {
+    // Attempt normalized bone name first (v1), then fall back to node search
+    const node = humanoid.getNormalizedBoneNode?.(name) || humanoid.getBoneNode?.(name);
+    if (!node) return;
+    node.rotation.set(x, y, z);
+    node.rotation.order = 'XYZ';
+  };
+
+  // Natural Standing (A-Pose): Ensure arms are down and relaxed
+  // Using radians: -1.35 is ~77 degrees down
+  setRot('leftUpperArm',   0, 0, -1.35);
+  setRot('leftLowerArm',   0, 0, -0.1);
+  setRot('leftHand',       0, 0, -0.1);
+
+  setRot('rightUpperArm',  0, 0,  1.35);
+  setRot('rightLowerArm',  0, 0,  0.1);
+  setRot('rightHand',      0, 0,  0.1);
+}
+
+// ─── VRM Model Component ──────────────────────────────────────────────────────
+const VRMModel = ({ url, viseme, customization }) => {
+  const vrmRef = useRef(null);
+  const { scene } = useThree();
+  const [status, setStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+
+  useEffect(() => {
+    // ── Abort flag: prevents double-add in React Strict Mode ──
+    let cancelled = false;
+
+    // Clean up any previously loaded VRM first
+    if (vrmRef.current) {
+      scene.remove(vrmRef.current.scene);
+      VRMUtils.deepDispose(vrmRef.current.scene);
+      vrmRef.current = null;
+    }
+
+    const loader = new GLTFLoader();
+    loader.register((parser) => new VRMLoaderPlugin(parser));
+
+    loader.load(
+      url,
+      (gltf) => {
+        if (cancelled) return;   // effect was cleaned up — abort
+
+        const vrm = gltf.userData.vrm;
+        if (!vrm) { setStatus('error'); return; }
+
+        VRMUtils.rotateVRM0(vrm);            // flip VRM0 to Three.js Y-up
+        vrm.scene.position.set(0, -1.5, 0);
+        vrm.scene.scale.setScalar(1.4);
+
+        applyRestPose(vrm);                  // arms down before adding to scene
+
+        scene.add(vrm.scene);
+        vrmRef.current = vrm;
+        setStatus('ready');
+      },
+      undefined,
+      (err) => {
+        if (!cancelled) { console.error('VRM Load Error:', err); setStatus('error'); }
+      }
+    );
+
+    // Cleanup: mark cancelled AND remove the scene object
+    return () => {
+      cancelled = true;
+      if (vrmRef.current) {
+        scene.remove(vrmRef.current.scene);
+        VRMUtils.deepDispose(vrmRef.current.scene);
+        vrmRef.current = null;
+      }
+    };
+  }, [url]);   // ← only re-run when url changes (not scene — scene ref is stable)
+
+  // ─── Dynamic Material Tinting ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!vrmRef.current || !customization) return;
+    
+    vrmRef.current.scene.traverse((node) => {
+      if (node.isMesh && node.material) {
+        const materials = Array.isArray(node.material) ? node.material : [node.material];
+        
+        materials.forEach(mat => {
+           // We check both material and node names for maximum VRM compatibility
+           const query = (mat.name + " " + node.name).toLowerCase();
+           
+           const isClothing = query.includes('cloth') || query.includes('top') || query.includes('bottom') || query.includes('shirt') || query.includes('shoe') || query.includes('outfit') || query.includes('wear') || query.includes('dress') || query.includes('jacket') || query.includes('pant');
+           const isHair = query.includes('hair');
+           const isSkin = query.includes('skin') || query.includes('face') || query.includes('body');
+
+           if (customization.clothesColor && isClothing) {
+              mat.color.set(customization.clothesColor);
+           }
+           else if (customization.hairColor && isHair) {
+              mat.color.set(customization.hairColor);
+           }
+           else if (customization.skinColor && isSkin) {
+              mat.color.set(customization.skinColor);
+           }
+        });
+      }
+    });
+  }, [customization?.skinColor, customization?.hairColor, customization?.clothesColor, status]);
+
+  // ─── Per-frame animation ───────────────────────────────────────────────────
+  useFrame((state, delta) => {
+    const vrm = vrmRef.current;
+    if (!vrm) return;
+
+    vrm.update(delta);
+
+    // Lip sync
+    const em = vrm.expressionManager;
+    if (em) {
+      const target = visemeToExpression[viseme] || VRMExpressionPresetName.Neutral;
+      MOUTH_EXPRS.forEach((expr) => {
+        const cur = em.getValue(expr) ?? 0;
+        const tgt = expr === target ? 1.0 : 0.0;
+        em.setValue(expr, THREE.MathUtils.lerp(cur, tgt, 14 * delta));
+      });
+
+      // Blinking
+      const t = state.clock.elapsedTime;
+      const blinkTgt = Math.sin(t * 3) > 0.96 ? 1 : 0;
+      const blinkCur = em.getValue(VRMExpressionPresetName.BlinkLeft) ?? 0;
+      const blinkVal = THREE.MathUtils.lerp(blinkCur, blinkTgt, 20 * delta);
+      em.setValue(VRMExpressionPresetName.BlinkLeft, blinkVal);
+      em.setValue(VRMExpressionPresetName.BlinkRight, blinkVal);
+    }
+
+    // Idle head sway
+    const head = vrm.humanoid?.getNormalizedBoneNode?.('head');
+    if (head) {
+      const t = state.clock.elapsedTime;
+      head.rotation.y = Math.sin(t * 0.5) * 0.05;
+      head.rotation.x = Math.sin(t * 0.35) * 0.025;
+    }
+  });
+
+  if (status === 'loading') {
+    return (
+      <Html center>
+        <div style={{ color: '#00ffff', background: 'rgba(0,0,0,0.6)', padding: '12px 20px', borderRadius: '8px', fontSize: '0.85rem' }}>
+          Loading Avatar…
+        </div>
+      </Html>
+    );
+  }
+
+  return null; // VRM scene is added imperatively to Three.js
+};
+
+// ─── Main Scene ───────────────────────────────────────────────────────────────
+const Scene3D = ({ viseme, customization, autoRotate = false, zoom = 3.2 }) => {
+  const avatarUrl = customization?.avatarUrl || '/models/avatar.vrm';
+  const groupRef = useRef();
+
+  useFrame((state, delta) => {
+    if (autoRotate && groupRef.current) {
+      groupRef.current.rotation.y += delta * 0.5;
+    }
+    // Smoothly lerp camera to target zoom instead of remounting Canvas
+    state.camera.position.z = THREE.MathUtils.lerp(state.camera.position.z, zoom, 8 * delta);
+    state.camera.updateProjectionMatrix();
+  });
+
+  return (
+    <group ref={groupRef}>
+      {/* Transparent background */}
+      
+      {/* Enhanced Lighting Setup */}
+      <ambientLight intensity={0.6} />
+      
+      {/* Key Light - Main illumination */}
+      <directionalLight 
+        position={[3, 5, 4]} 
+        intensity={2.2} 
+        castShadow 
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-far={50}
+        shadow-camera-left={-10}
+        shadow-camera-right={10}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
+      />
+      
+      {/* Fill Light - Soften shadows */}
+      <directionalLight position={[-3, 3, -3]} intensity={0.6} color="#34d399" />
+      
+      {/* Rim Light - Edge highlighting */}
+      <directionalLight position={[0, 2, -5]} intensity={0.8} color="#10b981" />
+      
+      {/* Accent Point Lights */}
+      <pointLight position={[2, 1, 2]} intensity={0.7} color="#10b981" distance={5} />
+      <pointLight position={[-2, 1, 2]} intensity={0.5} color="#34d399" distance={5} />
+      
+      {/* Skin tone light */}
+      <pointLight 
+        position={[0, 1.5, 2.5]} 
+        intensity={0.4} 
+        color={customization?.skinColor || '#ffddcc'} 
+        distance={3}
+      />
+
+      <ErrorBoundary>
+        <VRMModel url={avatarUrl} viseme={viseme} customization={customization} />
+      </ErrorBoundary>
+
+      {/* Enhanced Contact Shadows */}
+      <ContactShadows 
+        position={[0, -1.5, 0]} 
+        opacity={0.4} 
+        scale={10} 
+        blur={2.5} 
+        far={4}
+        color="#000000"
+      />
+      
+      {/* Environment for reflections */}
+      <Environment preset="city" />
+    </group>
+  );
+};
+
+export default Scene3D;

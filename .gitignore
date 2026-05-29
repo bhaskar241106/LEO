@@ -1,0 +1,38 @@
+# Environments
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local environment / secrets
+.env
+.env.local
+backend/.env
+backend/.env.optimized
+
+# IDEs and editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS Files
+.DS_Store
+Thumbs.db
