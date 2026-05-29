@@ -257,7 +257,7 @@ class ImageGenerator:
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "llama3",
+                    "model": "phi3:mini",
                     "prompt": f"Describe in vivid detail what an image of '{prompt}' would look like:",
                     "stream": False
                 },
@@ -288,7 +288,7 @@ class ImageGenerator:
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "llama3",
+                    "model": "phi3:mini",
                     "prompt": f"Enhance this image prompt with artistic details, style, lighting, and composition. Keep it under 100 words:\n\n{simple_prompt}\n\nEnhanced prompt:",
                     "stream": False
                 },
