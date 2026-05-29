@@ -176,8 +176,11 @@ Now respond to the user's current message with fresh, detailed information."""
             ctx = 8192
             predict = 1024
 
-        # Increase temperature for more varied responses
-        temp = temperature if temperature is not None else 0.85
+        # Lower temperature for fast model (phi3:mini) to prevent random hallucinations on short inputs
+        if target_model == self.fast_model:
+            temp = 0.3 if temperature is None else min(temperature, 0.4)
+        else:
+            temp = temperature if temperature is not None else 0.7
 
         payload = {
             "model": target_model,
