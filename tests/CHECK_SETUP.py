@@ -79,7 +79,7 @@ def main():
     all_good &= check_file("backend/main.py", "Backend main.py")
     all_good &= check_file("backend/requirements.txt", "Backend requirements.txt")
     all_good &= check_file("frontend/package.json", "Frontend package.json")
-    all_good &= check_file("app_launcher.py", "App launcher")
+    all_good &= check_file("scripts/app_launcher.py", "App launcher")
     print()
     
     # Check configuration files
@@ -119,7 +119,7 @@ def main():
         print("✅ All checks passed! You're ready to run the application.")
         print()
         print("To start the application, run:")
-        print("  python app_launcher.py")
+        print("  python scripts/app_launcher.py")
         print()
         print("Or manually:")
         print("  1. Terminal 1: ollama serve")
