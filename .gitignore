@@ -36,3 +36,7 @@ backend/.env.optimized
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Local Databases
+*.db
+memory.db
