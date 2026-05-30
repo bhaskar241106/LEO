@@ -107,7 +107,7 @@ async def chat(request: ChatRequest):
         memory.add_message("user", request.message)
         memory.add_message("assistant", response_text)
         
-        raw_visemes = phonemes.get_visemes(response_text)
+        raw_visemes = phonemes.get_visemes(response_text, language=detected_lang)
         duration = len(response_text) * 0.05 
         timeline = phonemes.map_audio_duration(raw_visemes, duration)
         
